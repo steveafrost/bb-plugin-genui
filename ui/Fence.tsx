@@ -67,6 +67,7 @@ export const Fence = memo(function Fence({
   language,
   code,
   complete,
+  closed,
   stateKey,
   threadId,
   messageId,
@@ -75,8 +76,15 @@ export const Fence = memo(function Fence({
 }: {
   language: FenceLanguage;
   code: string;
-  /** UI input stopped (closed or unclosed); apps arrive here only closed or streaming. The overlay uses text settlement. */
+  /** The block's text stopped changing. UI arrives here closed or unclosed; apps only closed or streaming. */
   complete: boolean;
+  /**
+   * The closing fence arrived, as opposed to the reply ending mid-block. Only a
+   * closed block is known to be finished code: an unclosed one is the tail of a
+   * spec that was still being written, so it keeps drawing what arrived. The
+   * overlay cannot see the delimiter, so it passes its settled answer.
+   */
+  closed: boolean;
   stateKey: string;
   threadId: string;
   /** The assistant message holding the block: BB's message id, which is also its timeline row id. */
@@ -91,6 +99,7 @@ export const Fence = memo(function Fence({
     <UiFence
       code={code}
       complete={complete}
+      closed={closed}
       stateKey={stateKey}
       threadId={threadId}
       messageId={messageId}
@@ -135,6 +144,7 @@ function AppFence({
 function UiFence({
   code,
   complete,
+  closed,
   stateKey,
   threadId,
   messageId,
@@ -143,6 +153,7 @@ function UiFence({
 }: {
   code: string;
   complete: boolean;
+  closed: boolean;
   stateKey: string;
   threadId: string;
   messageId: string;
@@ -164,7 +175,12 @@ function UiFence({
   const superseded = useSuperseded(threadId, messageId);
   const motion = useMotionScope();
 
-  if (shown?.program == null) {
+  // A closed block that still doesn't compile is broken code, not a spec still
+  // arriving. Drawing its last parseable prefix would show an empty frame (a
+  // Card keeps its title, loses its children) with the reason hidden in the
+  // Source panel, so a closed block reports the error instead. An unclosed one
+  // keeps its prefix: the reply just stopped mid-spec.
+  if (shown?.program == null || (closed && !result.complete)) {
     return complete ? (
       <RenderFailure source={code} diagnostics={result.diagnostics} />
     ) : (

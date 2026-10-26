@@ -177,6 +177,8 @@ function SettlingFence({ block, actions }: { block: FenceBlock; actions: ThreadA
       language={block.language}
       code={block.code}
       complete={settledCode === block.code}
+      // The overlay cannot see the delimiter: a settled block is its best answer for both.
+      closed={settledCode === block.code}
       stateKey={`bb.genui.state:${block.key}`}
       threadId={block.threadId}
       messageId={block.messageId}
